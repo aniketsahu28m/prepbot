@@ -1,0 +1,13 @@
+[project]
+name = "interview-coach"
+version = "0.1.0"
+description = "Multi-agent voice interview simulator built with Google ADK and Gemini"
+requires-python = ">=3.10"
+dependencies = ["google-adk>=2.11"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+pythonpath = ["agents"]
+testpaths = ["tests"]

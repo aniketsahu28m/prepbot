@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PrepBot: AI Interview Coach</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+  :root { --bg:#f6f7fb; --card:#fff; --ink:#1d2433; --muted:#667085; --line:#e4e7ec;
+          --brand:#4f46e5; --brand-soft:#eef2ff; --bad:#b42318; --bad-soft:#fef3f2; --ok:#067647; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--ink); }
+  header { background:var(--card); border-bottom:1px solid var(--line); }
+  .bar { max-width:860px; margin:auto; padding:14px 20px; display:flex; align-items:center; gap:16px; }
+  .logo { font-weight:700; font-size:20px; }
+  .steps { margin-left:auto; display:flex; gap:6px; font-size:14px; color:var(--muted); }
+  .steps span { padding:4px 10px; border-radius:99px; }
+  .steps span.on { background:var(--brand-soft); color:var(--brand); font-weight:600; }
+  main { max-width:860px; margin:24px auto; padding:0 20px 60px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:24px; margin-bottom:18px; }
+  h1 { font-size:24px; margin:0 0 6px; } h2 { font-size:18px; margin:0 0 10px; }
+  .hint { color:var(--muted); margin:0 0 18px; }
+  label { display:block; font-weight:600; margin:14px 0 6px; }
+  textarea, input[type=text] { width:100%; font:inherit; padding:12px; border:1px solid var(--line); border-radius:10px; resize:vertical; }
+  textarea:focus, input:focus { outline:2px solid var(--brand); border-color:transparent; }
+  button { font:inherit; font-weight:600; border:0; border-radius:10px; padding:12px 18px; cursor:pointer; background:var(--brand); color:#fff; }
+  button.ghost { background:var(--card); color:var(--ink); border:1px solid var(--line); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .right { margin-left:auto; }
+  .choice { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px; }
+  .choice button { padding:20px; text-align:left; background:var(--brand-soft); color:var(--ink); border:1px solid #c7d2fe; }
+  .choice b { display:block; font-size:18px; margin-bottom:4px; }
+  .choice small { color:var(--muted); font-weight:400; }
+  #chat { height:420px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding:4px; }
+  .msg { max-width:80%; padding:10px 14px; border-radius:14px; white-space:pre-wrap; }
+  .msg.bot { background:var(--brand-soft); align-self:flex-start; border-bottom-left-radius:4px; }
+  .msg.you { background:#f2f4f7; align-self:flex-end; border-bottom-right-radius:4px; }
+  .msg.note { align-self:center; color:var(--muted); font-size:14px; background:none; }
+  #mic { width:92px; height:92px; border-radius:50%; font-size:34px; }
+  #mic.live { background:var(--bad); animation:pulse 1.4s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 #b4231855} 70%{box-shadow:0 0 0 18px #b4231800} }
+  .error { background:var(--bad-soft); color:var(--bad); border:1px solid #fecdca; border-radius:10px; padding:12px 14px; margin-bottom:18px; }
+  .loading { display:flex; gap:12px; align-items:center; color:var(--muted); }
+  .spin { width:20px; height:20px; border:3px solid var(--line); border-top-color:var(--brand); border-radius:50%; animation:s 1s linear infinite; }
+  @keyframes s { to { transform:rotate(360deg) } }
+  .score { font-size:48px; font-weight:800; color:var(--brand); }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; }
+  .md h2 { margin-top:22px; } .md ul { padding-left:20px; }
+  .lab { margin-top:14px; } .lab label { margin:0; }
+  .upload { margin-left:auto !important; font-weight:600; font-size:14px; color:var(--brand); cursor:pointer;
+            border:1px solid #c7d2fe; background:var(--brand-soft); padding:6px 12px; border-radius:8px; }
+  .lab + textarea { margin-top:6px; }
+  [hidden] { display:none !important; }
+  @media (max-width:640px) { .choice { grid-template-columns:1fr; } .steps { display:none; } }
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <div class="logo">🎙️ PrepBot</div>
+  <div class="steps"><span id="s1" class="on">1 · Setup</span><span id="s2">2 · Interview</span><span id="s3">3 · Report</span></div>
+</div></header>
+
+<main>
+  <div id="error" class="error" hidden></div>
+
+  <!-- STEP 1: paste JD + resume -->
+  <section id="setup" class="card">
+    <h1>Practise for your next interview</h1>
+    <p class="hint">Paste or upload (PDF) the job you're applying for and your resume. PrepBot builds an interview just for you,
+      runs it, then gives you a score and a coaching report.</p>
+    <div class="row lab"><label for="jd">1. Job description</label>
+      <label class="upload">📄 Upload PDF<input type="file" accept="application/pdf" data-target="jd" hidden></label></div>
+    <textarea id="jd" rows="7" placeholder="Paste the full job posting here…"></textarea>
+    <div class="row lab"><label for="resume">2. Your resume</label>
+      <label class="upload">📄 Upload PDF<input type="file" accept="application/pdf" data-target="resume" hidden></label></div>
+    <textarea id="resume" rows="7" placeholder="Paste your resume as text here…"></textarea>
+    <div class="row" style="margin-top:18px">
+      <button id="planBtn" class="right">Plan my interview →</button>
+    </div>
+  </section>
+
+  <!-- STEP 1b: plan + choose mode -->
+  <section id="planCard" class="card" hidden>
+    <h2>Your interview plan</h2>
+    <div id="planText" class="md"></div>
+    <div class="choice">
+      <button id="typeBtn"><b>⌨️ Type my answers</b><small>Chat-style. Good for a first try.</small></button>
+      <button id="voiceBtn"><b>🎤 Speak my answers</b><small>A real conversation out loud. Needs a microphone and Chrome.</small></button>
+    </div>
+  </section>
+
+  <!-- STEP 2: interview -->
+  <section id="interview" class="card" hidden>
+    <div class="row" style="margin-bottom:10px">
+      <h2 style="margin:0">Interview</h2>
+      <button id="endBtn" class="ghost right">End &amp; get my report</button>
+    </div>
+    <div id="chat"></div>
+    <div id="typeBox" class="row" style="margin-top:12px">
+      <textarea id="answer" rows="2" style="flex:1" placeholder="Type your answer… (Enter to send, Shift+Enter for a new line)"></textarea>
+      <button id="sendBtn">Send</button>
+    </div>
+    <div id="voiceBox" class="row" style="margin-top:16px; justify-content:center; flex-direction:column" hidden>
+      <button id="mic" title="Turn microphone on/off">🎤</button>
+      <div id="micStatus" class="hint" style="margin:0">Connecting…</div>
+    </div>
+  </section>
+
+  <div id="busy" class="card loading" hidden><div class="spin"></div><span id="busyText"></span></div>
+
+  <!-- STEP 3: report -->
+  <section id="reportCard" hidden>
+    <div class="card row">
+      <div><div class="hint" style="margin:0">Overall score</div><div class="score" id="overall">–</div></div>
+      <p id="summary" style="flex:1; margin:0 0 0 12px"></p>
+    </div>
+    <div class="card"><h2>Score for each answer</h2>
+      <p class="hint">1 = needs work, 5 = excellent. "Plain English?" means a non-technical person would follow it.</p>
+      <div style="overflow-x:auto"><table id="scoreTable"></table></div></div>
+    <div class="card md" id="report"></div>
+    <div class="row"><span class="hint" id="savedNote"></span>
+      <button class="right" onclick="location.reload()">Start a new interview</button></div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let sid = null;
+
+// ---------- helpers ----------
+const md = s => marked.parse(String(s || "").replace(/</g, "&lt;"));  // escape HTML, keep Markdown
+function step(n) { [1,2,3].forEach(i => $("s"+i).classList.toggle("on", i === n)); }
+function showError(msg) { $("error").textContent = msg; $("error").hidden = !msg; if (msg) scrollTo(0, 0); }
+function busy(text) { $("busy").hidden = !text; $("busyText").textContent = text || ""; }
+
+async function post(url, body) {
+  showError("");
+  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await r.json().catch(() => ({ error: "The server didn't answer. Is `python app.py` still running?" }));
+  if (data.error) { showError(data.error); throw new Error(data.error); }
+  return data;
+}
+
+function addMsg(role, text, merge = false) {
+  const chat = $("chat"), last = chat.lastElementChild;
+  if (merge && last && last.dataset.role === role) {    // voice transcripts arrive in pieces
+    last.textContent += (/^\s/.test(text) ? "" : " ") + text;
+  } else {
+    const d = document.createElement("div");
+    d.className = "msg " + role; d.dataset.role = role; d.textContent = text.trim();
+    chat.appendChild(d);
+  }
+  chat.scrollTop = chat.scrollHeight;
+}
+
+// ---------- step 1: PDF upload -> text in the box ----------
+const PDFJS = "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/build/";
+async function pdfToText(file) {
+  const pdfjs = await import(PDFJS + "pdf.min.mjs");
+  pdfjs.GlobalWorkerOptions.workerSrc = PDFJS + "pdf.worker.min.mjs";
+  const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+  const pages = [];
+  for (let i = 1; i <= doc.numPages; i++) {
+    const c = await (await doc.getPage(i)).getTextContent();
+    pages.push(c.items.map(t => t.str + (t.hasEOL ? "\n" : " ")).join(""));
+  }
+  return pages.join("\n\n").replace(/[ \t]+/g, " ").replace(/ \n/g, "\n").trim();
+}
+document.querySelectorAll("input[type=file]").forEach(inp => inp.onchange = async () => {
+  const file = inp.files[0], box = $(inp.dataset.target);
+  if (!file) return;
+  showError(""); box.value = "Reading " + file.name + "…";
+  try {
+    const text = await pdfToText(file);
+    if (!text) throw new Error("empty");
+    box.value = text;
+  } catch {
+    box.value = "";
+    showError(`Couldn't read text from "${file.name}". If it's a scanned image, copy the text and paste it instead.`);
+  }
+  inp.value = "";  // lets you pick the same file again
+});
+
+// ---------- step 1: plan ----------
+$("planBtn").onclick = async () => {
+  const jd = $("jd").value.trim(), resume = $("resume").value.trim();
+  if (!jd || !resume) return showError("Please paste both the job description and your resume.");
+  $("planBtn").disabled = true; busy("Reading the job and your resume, and planning your interview… (about 20–40 seconds)");
+  try {
+    const d = await post("/api/plan", { text: `JOB DESCRIPTION:\n${jd}\n\nMY RESUME:\n${resume}` });
+    sid = d.session_id;
+    $("planText").innerHTML = md(d.replies.join("\n\n"));
+    $("setup").hidden = true; $("planCard").hidden = false;
+  } catch {} finally { busy(); $("planBtn").disabled = false; }
+};
+
+// ---------- step 2a: typed interview ----------
+$("typeBtn").onclick = async () => {
+  startInterview(); $("typeBox").hidden = false; $("voiceBox").hidden = true;
+  await send("I'm ready. Please start the interview.", false);
+};
+
+async function send(text, show = true) {
+  if (show) addMsg("you", text);
+  $("sendBtn").disabled = true; busy("Interviewer is thinking…");
+  try {
+    const d = await post("/api/chat", { session_id: sid, text });
+    d.replies.forEach(r => addMsg("bot", r));
+    if (d.report) return showReport(d);
+  } catch {} finally { busy(); $("sendBtn").disabled = false; $("answer").focus(); }
+}
+$("sendBtn").onclick = () => { const t = $("answer").value.trim(); if (t) { $("answer").value = ""; send(t); } };
+$("answer").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("sendBtn").click(); } });
+
+function startInterview() { $("planCard").hidden = true; $("interview").hidden = false; step(2); }
+
+// ---------- step 2b: voice interview ----------
+// Mic -> 16 kHz 16-bit PCM -> WebSocket.  WebSocket -> 24 kHz PCM -> speakers.
+let ws, micCtx, micStream, playCtx, playAt = 0, playing = [], micOn = false;
+const WORKLET = `class P extends AudioWorkletProcessor {
+  constructor() { super(); this.buf = []; }
+  process(inputs) {
+    const ch = inputs[0][0];
+    if (ch) { for (const v of ch) this.buf.push(Math.max(-1, Math.min(1, v)) * 32767);
+      if (this.buf.length >= 1600) { this.port.postMessage(Int16Array.from(this.buf).buffer); this.buf = []; } }
+    return true;
+  } }
+registerProcessor("pcm", P);`;
+
+$("voiceBtn").onclick = async () => {
+  startInterview(); $("typeBox").hidden = true; $("voiceBox").hidden = false;
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+  } catch { return showError("PrepBot couldn't use your microphone. Click the 🔒 icon in the address bar, allow the microphone, then reload."); }
+  micCtx = new AudioContext({ sampleRate: 16000 });
+  playCtx = new AudioContext({ sampleRate: 24000 });
+  await micCtx.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET], { type: "application/javascript" })));
+  const node = new AudioWorkletNode(micCtx, "pcm");
+  micCtx.createMediaStreamSource(micStream).connect(node);
+  node.port.onmessage = e => { if (micOn && ws?.readyState === 1) ws.send(e.data); };
+
+  ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/${sid}`);
+  ws.binaryType = "arraybuffer";
+  ws.onopen = () => { setMic(true); };
+  ws.onclose = () => { setMic(false); $("micStatus").textContent = "Voice connection closed."; };
+  ws.onmessage = e => {
+    if (typeof e.data !== "string") return playPcm(e.data);
+    const m = JSON.parse(e.data);
+    if (m.error) showError(m.error);
+    else if (m.interrupted) stopPlayback();
+    else addMsg(m.role, m.text, true);
+  };
+};
+
+function setMic(on) {
+  micOn = on;
+  $("mic").classList.toggle("live", on); $("mic").textContent = on ? "⏸" : "🎤";
+  $("micStatus").textContent = on ? "Listening. Just talk. Tap to mute." : "Muted. Tap the mic to talk.";
+}
+$("mic").onclick = () => setMic(!micOn);
+
+function playPcm(buf) {
+  const pcm = new Int16Array(buf), f = new Float32Array(pcm.length);
+  for (let i = 0; i < pcm.length; i++) f[i] = pcm[i] / 32768;
+  const b = playCtx.createBuffer(1, f.length, 24000); b.copyToChannel(f, 0);
+  const src = playCtx.createBufferSource(); src.buffer = b; src.connect(playCtx.destination);
+  playAt = Math.max(playAt, playCtx.currentTime); src.start(playAt); playAt += b.duration;
+  playing.push(src); src.onended = () => playing.splice(playing.indexOf(src), 1);
+}
+function stopPlayback() { playing.forEach(s => s.stop()); playing = []; playAt = 0; }
+function stopVoice() { ws?.close(); stopPlayback(); micStream?.getTracks().forEach(t => t.stop()); micCtx?.close(); }
+
+// ---------- step 3: report ----------
+$("endBtn").onclick = async () => {
+  if (!confirm("End the interview and get your report?")) return;
+  stopVoice(); $("endBtn").disabled = true; $("typeBox").hidden = $("voiceBox").hidden = true;
+  busy("Scoring your answers and writing your coaching report… (about 30–60 seconds)");
+  try { showReport(await post("/api/finish", { session_id: sid })); }
+  catch { $("endBtn").disabled = false; } finally { busy(); }
+};
+
+function showReport(d) {
+  if (!d.report) { d.replies.forEach(r => addMsg("bot", r)); return showError("The report isn't ready yet. Try 'End & get my report' again."); }
+  stopVoice(); step(3);
+  $("interview").hidden = true; $("reportCard").hidden = false;
+  const sc = d.scores || {};
+  $("overall").textContent = sc.overall_score != null ? `${sc.overall_score}/5` : "–";
+  $("summary").textContent = sc.summary || "";
+  $("scoreTable").innerHTML = "<tr><th>Question</th><th>Accuracy</th><th>Clarity</th><th>Structure</th><th>Plain English?</th><th>Feedback</th></tr>";
+  for (const s of sc.scores || []) {
+    const tr = $("scoreTable").insertRow();
+    [s.question, s.technical_accuracy, s.clarity, s.structure,
+     s.works_for_non_technical_listener ? "✅ Yes" : "❌ No", s.feedback].forEach(v => tr.insertCell().textContent = v);
+  }
+  $("report").innerHTML = md(d.report);
+  $("savedNote").textContent = "A copy is saved in the sessions/ folder of the project.";
+  scrollTo(0, 0);
+}
+</script>
+</body>
+</html>

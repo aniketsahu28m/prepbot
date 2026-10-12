@@ -1,0 +1,38 @@
+{
+  "api_debugging": [
+    "A customer says our API 'randomly' returns 401 since yesterday. Walk me through how you'd debug it.",
+    "Requests to an endpoint succeed locally but time out in production. What do you check, in what order?",
+    "How do you tell the difference between a client bug and a server bug from logs alone?",
+    "A 429 Too Many Requests shows up for one customer only. What's happening and how do you fix it?"
+  ],
+  "http_and_rest": [
+    "Explain the difference between 400, 401, 403, 404 and 409 with a real example of each.",
+    "What makes an API endpoint idempotent, and why does it matter for retries?",
+    "How would you design pagination for an endpoint that lists millions of call records?"
+  ],
+  "webhooks": [
+    "Our webhook to a customer's server keeps failing. How do you figure out whose side the problem is on?",
+    "How should a webhook receiver verify that a request really came from us?",
+    "Design retry behaviour for webhooks. What happens if the customer's server is down for an hour?"
+  ],
+  "system_design": [
+    "Design a service that sends 1 million SMS messages in a burst without overloading carriers.",
+    "How would you build a status page that shows live API health to customers?",
+    "Design rate limiting for a multi-tenant public API."
+  ],
+  "telephony": [
+    "What happens, end to end, when an app places an outbound call through a voice API?",
+    "A customer reports one-way audio on calls. What are the likely causes?",
+    "Explain what SIP is to someone who has only built web apps."
+  ],
+  "behavioral": [
+    "Tell me about a time you handled an angry customer. What did you do and what was the outcome?",
+    "Describe a production incident you owned. How did you communicate during it?",
+    "Tell me about a time you explained something technical to a non-technical person and it didn't land at first."
+  ],
+  "customer_roleplay": [
+    "I run a small bakery and our order-confirmation texts stopped going out this morning. My developer left last month. I see 'Error 401' in an email. What does that mean and what do I do?",
+    "Our appointment reminder calls work for some customers but others say they never get them. I'm not technical. Can you help?",
+    "We switched website hosts last week and now our 'message received' notifications don't arrive. Is your system broken?"
+  ]
+}
